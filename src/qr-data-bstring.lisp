@@ -139,7 +139,8 @@
 ;; (4) KANJI mode: Shift JIS system, two bytes for a single character. JIS X 0208
 (defun word->decimal (kanji-word)
   "Encode a KANJI-WORD to decimal."
-  ;; TODO: This is definitely SBCL-specific, try to solve it.
+  ; Use BABEL library to erase SBCL-specific problem.
+  ; Thanks to xach <https://github.com/xach>
   (let ((result (babel-encodings::ucs-to-cp932 (char-code kanji-word)))
 	(subtractor 0))
     (setf subtractor (cond
