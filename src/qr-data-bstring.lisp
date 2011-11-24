@@ -140,7 +140,7 @@
 (defun word->decimal (kanji-word)
   "Encode a KANJI-WORD to decimal."
   ;; TODO: This is definitely SBCL-specific, try to solve it.
-  (let ((result (sb-impl::ucs-to-sjis (char-code kanji-word)))
+  (let ((result (babel-encodings::ucs-to-cp932 (char-code kanji-word)))
 	(subtractor 0))
     (setf subtractor (cond
 		       ((<= #x8140 result #x9FFC) #x8140)

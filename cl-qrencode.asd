@@ -26,7 +26,7 @@
   :version "1.3.2"
   :maintainer "johnc <jnjcc@live.com>"
   :licence "GPL"
-  :depends-on (#:zpng)
+  :depends-on (#:zpng #:babel)
   :components ((:file "package")
 	       (:module "src"
 			:components ((:file "qr-utils")
