@@ -16,8 +16,8 @@
 ;;;; cl-qrencode.asd
 ;;;; This file contains
 
-#-(or sbcl)
-(error "Unfortunately, this package only works under SBCL for now.")
+; #-(or sbcl)
+; (error "Unfortunately, this package only works under SBCL for now.")
 
 (asdf:defsystem #:cl-qrencode
   :name    "cl-qrencode"
