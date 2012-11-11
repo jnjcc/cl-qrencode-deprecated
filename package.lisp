@@ -23,6 +23,6 @@
 		#:png
 		#:data-array
 		#:write-png)
-  (:export #:qrencode))
-	   ; #:function-pattern ; Matrix status after paint Function Patterns.
-	   ; #:encoding-region))
+  (:export #:qrencode
+	   #:sdebug
+	   #:undebug))
