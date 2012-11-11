@@ -201,12 +201,12 @@ correction word _MINUS_ 1."
       (when (char= (char bstring i) #\1)
 	(incf result (ash 1 i))))
     result))
-(defun generate-msgpoly (bstring version errc)
+(defun generate-msgpoly (bstring version errc blk)
   "Convert bstring to message polynomial, length should be times of 8."
   (declare (type string bstring)
 	   (type number version)
 	   (type symbol errc))
-  (let ((exponents (- (+ (nr-data-codewords version errc) 
+  (let ((exponents (- (+ (nr-data-codewords version errc blk) 
 			 (nr-errc-codewords version errc))
 		     1))
 	(terms (/ (length bstring) 8))
@@ -233,7 +233,21 @@ is the number of error correction words."
 	 (setf result (multiplication result multiplier)))
     result))
 
-(defun generate-errcobj (bstring version errc)
+(defun generate-errcobj-1 (errcobj max)
+  (let ((msgpoly (polynomial errcobj))
+	(newpoly nil))
+    (do ((term (first msgpoly))
+	 (xexp (- max 1) (1- xexp)))
+	((< xexp 0))
+      (if (and (cdr term)
+	       (= xexp (cdr term)))
+	  (progn
+	    (push term newpoly)
+	    (setf msgpoly (rest msgpoly))
+	    (setf term (first msgpoly)))
+	  (push (cons 0 xexp) newpoly)))
+    (setf (polynomial errcobj) (reverse newpoly))))
+(defun generate-errcobj (bstring version errc blk)
   "Generate error correction polynomial. This in fact is the division operation of GF(2^8):
 1. Multiply the generator polynomial so that the result's first term equals message polynomial.
 2. XOR the multiply result so as to erase the first term of message polynomial.
@@ -241,14 +255,14 @@ is the number of error correction words."
   (declare (type string bstring)
 	   (type number version)
 	   (type symbol errc))
-  (let* ((msgobj (generate-msgpoly bstring version errc))
+  (let* ((msgobj (generate-msgpoly bstring version errc blk))
 	 (genobj (generate-genobj (nr-errc-codewords version errc)))
 	 (genpoly (polynomial genobj))
 	 (tmpobj (make-instance 'generator-polynomial)))
-    (princ "Message Polynomial:")
-    (print msgobj)
-    (princ "Generator Polynomial:")
-    (print genobj)
+    (dbg :qr-errc "Message Polynomial")
+    (dbg :qr-errc "~A" msgobj)
+    (dbg :qr-errc "Generator Polynomial:")
+    (dbg :qr-errc "~A" genobj)
     (do ()
 	((< (cdr (first (polynomial msgobj)))
 	    (cdr (first genpoly))))
@@ -258,8 +272,9 @@ is the number of error correction words."
 	(setf (polynomial tmpobj) (multiply-each-term genpoly :adelta adelta
 						      :xdelta xdelta :part :both))
 	(setf msgobj (addition msgobj tmpobj))))
-    (princ "Errc Polynomial:")
-    (print msgobj)
+    (generate-errcobj-1 msgobj (cdr (first genpoly)))
+    (dbg :qr-errc "Errc Polynomial:")
+    (dbg :qr-errc "~A" msgobj)
     msgobj))
 
 ; After all, we have to change the error correction polynomial back to bstring
@@ -287,7 +302,6 @@ Format Information is consisted of 5 bits: 2 *ERRC-INDICATOR*, 3 *MASK-PATTERN-R
 Version Information is consisted of 6 bits, all used to encode Version.
 FORMAT-P means bstring is Format Information, otherwise, Version Information."
   (declare (type string bstring))
-  ; (print format-p)
   (when (and format-p (not (= (length bstring) 5)))
     (error 'qr-bad-arguments :file-name "qr-errc.lisp"
 	   :function-name "info->msgpoly" :arguments bstring
@@ -315,13 +329,13 @@ Polynomial(0 for Generator Polynomial, of course)."
   (let ((msgobj (info->msgobj bstring :format-p format-p))
 	(genobj (make-instance 'generator-polynomial))
 	(tmpobj (make-instance 'generator-polynomial)))
-    (princ "Format/Version Information Polynomial:")
-    (print msgobj)
+    (dbg :qr-errc "Format/Version Information Polynomial:")
+    (dbg :qr-errc "~A" msgobj)
     (if format-p
 	(setf (polynomial genobj) *format-generator*)
 	(setf (polynomial genobj) *version-generator*))
-    (princ "Format/Version Information Generator Polynomial:")
-    (print genobj)
+    (dbg :qr-errc "Format/Version Information Generator Polynomial:")
+    (dbg :qr-errc "~A" genobj)
     (do ((genpoly (polynomial genobj)))
 	((< (cdr (first (polynomial msgobj)))
 	    (cdr (first genpoly))))
@@ -329,8 +343,10 @@ Polynomial(0 for Generator Polynomial, of course)."
 		       (cdr (first genpoly)))))
 	(setf (polynomial tmpobj) (multiply-each-term genpoly :xdelta xdelta))
 	(setf msgobj (addition msgobj tmpobj))))
-    (princ "Format/Version Information Errc Polynomial:")
-    (print msgobj)
+    (if format-p
+	(dbg :qr-errc "Format Information Errc Polynomial:")
+       	(dbg :qr-errc "Version Information Errc Polynomial:"))
+    (dbg :qr-errc "~A" msgobj)
     msgobj))
 (defun generate-info-errc (bstring &key (format-p t))
   "Generate Error Correction bits for Format/Version Information"
@@ -355,5 +371,4 @@ for Format Information, XOR it with the mask 101010000010010."
       (setf bstring (map 'string #'(lambda (char1 char2)
 				     (if (char= char1 char2) #\0 #\1))
 			 bstring mask)))
-    (print (length bstring))
     bstring))
