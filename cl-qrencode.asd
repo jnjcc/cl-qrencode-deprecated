@@ -23,7 +23,7 @@
   :name    "cl-qrencode"
   :description "QR Code encoder in pure Common Lisp."
   :author  "johnc <jnjcc@live.com>"
-  :version "1.3.2"
+  :version "1.0.2"
   :maintainer "johnc <jnjcc@live.com>"
   :licence "GPL"
   :depends-on (#:zpng #:babel)
@@ -36,7 +36,10 @@
 				     (:file "qr-data-bstring")
 				     (:file "qr-bstring")
 				     (:file "qr-errc")
-				     (:file "qr-encode")))
+				     (:file "qr-encode")
+				     (:file "qr-blocks")
+				     (:file "qr-mask")
+				     (:file "qr-image")))
 	       (:module "tests"
 			:components ((:file "qr-bstring-testcase")
 				     (:file "qr-encode-testcase")
