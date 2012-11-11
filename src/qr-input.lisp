@@ -23,10 +23,13 @@
    ; VERSION: 1~40
   ((version :initarg :version :initform 1 :accessor version)
    ; MODE indicator: :numberic, :alphanumeric, :binary, or :kanji
-   (mode :initarg :mode :initform :alphanumeric :reader mode)
+   (mode :initarg :mode :initform :binary :reader mode)
    ; Correction: :level-l :level-m :level-q :level-h
    (correction :initarg :correction :initform :level-q :reader correction)
-   (data :initarg :data :reader data)))
+   ; Raw input data
+   (data :initarg :data :reader data)
+   ; Data encoded into bstring, depends on MODE only
+   (data-bstring :initarg :data-bstring :accessor data-bstring)))
 
 (defmethod print-object ((input qr-input) stream)
   (fresh-line)
@@ -36,30 +39,38 @@
 	  (data input) (version input) (mode input) (correction input))
   (format stream "~%<<<<<<<<<<<<<<<<<<<<<<<<<<<<~%"))
 
-(defun string->input (text &key (version 1) (mode :alphanumeric) (correction :level-q))
-  "Put the input text into the QR-INPUT instance."
+(defmethod encode-input ((input qr-input))
+  (with-slots (version mode data data-bstring) input
+    (setf data-bstring (data->bstring data mode))
+    ; Terminator
+    (setf data-bstring (concatenate 'string data-bstring
+				    "0000")))
+  input)
+
+(defmethod adjust-version ((input qr-input) data-len)
+  "Assume we can find a version to hold all data"
+  (with-slots (version mode correction data data-bstring) input
+    (loop for ver from version to 41 do
+	 (when (= ver 41)
+	   (setf version 41)
+	   (return))
+         ; mode indicator length, character count indicator length
+	 (let ((mil 4)
+	       (cil (count-indicator-bits ver mode)))
+	   (when (<= (* (ceiling (+ mil cil data-len) 8) 8)
+		     (data-bits-capacity ver correction))
+	     (unless (= version ver)
+	       (dbg :qr-input-core "Version reset from ~A to ~A~%" version ver)
+	       (setf version ver))
+	     (return))))))
+
+(defun string->input (text &key (version 1) (mode :binary) (correction :level-q))
+  "Put the input text into the QR-INPUT instance, with version adjusted"
   (declare (type string text) (type symbol mode correction))
-  (let ((size (length text)))
-    (when (or (>= size (- (+ (errc-words version correction 3) 
-			     (* (+ (errc-words version correction 1)
-				   (errc-words version correction 3))
-				(errc-words version correction 2)))
-			  3))
-	      (or (< version 1) (> version 40)))
-      (setf version (adjust-version size version correction))))
+  (setf version (max version 1))
+  (setf version (min version 40))
   (let ((input (make-instance 'qr-input :data text
 			      :version version :mode mode :correction correction)))
+    (let ((len (length (data-bstring (encode-input input)))))
+      (adjust-version input len))
     input))
-(defun adjust-version (size version correction)
-  (let ((old version))
-    (loop for ver from 1 to 40 do
-	 (when (< size (- (+ (errc-words ver correction 3)
-			     (* (+ (errc-words ver correction 1)
-				   (errc-words ver correction 3))
-				(errc-words ver correction 2)))
-			  3))
-	   (setf version ver)
-	   (return)))
-    (if (= old version)
-	(error "Not able to hold that many codewords.")
-	version)))
