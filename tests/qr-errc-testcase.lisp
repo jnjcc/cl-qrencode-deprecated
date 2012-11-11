@@ -19,6 +19,8 @@
 
 (in-package #:cl-qrencode)
 
+;; Version 1.3.2?! That was a joke...
+
 ; INPUT:  (coff1 exp1) (coff2 exp2), ...
 ; OUTPUT: ((coff1 . exp1) (coff2 . exp2) ...)
 (defmacro make-message-poly-1 (&rest parts)

@@ -19,6 +19,8 @@
 
 (in-package #:cl-qrencode)
 
+;; Version 1.3.2?! That was a joke...
+
 ;;; Testcase adapted from Annex G
 (defvar *input-text* "01234567")
 (defvar *encode-data* "0001 0000001000 0000001100 0101011001 1000011 0000"
