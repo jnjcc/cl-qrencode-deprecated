@@ -25,3 +25,17 @@
   `(do ()
        ((not ,test) nil)
      ,@body))
+
+
+;; Adapted from P. Norvig's PAIP
+(defvar *dbg-ids* nil)
+(defun sdebug (&rest ids)
+  (setf *dbg-ids* (union ids *dbg-ids*)))
+(defun undebug (&rest ids)
+  (setf *dbg-ids* (if (null ids)
+		      nil
+		      (set-difference *dbg-ids* ids))))
+(defun dbg (id format-string &rest args)
+  (when (member id *dbg-ids*)
+    (fresh-line *debug-io*)
+    (apply #'format *debug-io* format-string args)))
