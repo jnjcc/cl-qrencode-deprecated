@@ -120,11 +120,11 @@ for each mode, the character capacity are different.")
 
 ;;------------------------------------------------------------------------------
 ;; (3) Error Correction codewords: Table 13 ~ Table 22
-;;     TODO: Seems we only considered the situtation of only one block.
+;;     NOTICE: I typed, this sucks
 ;;------------------------------------------------------------------------------
 (defvar *errc-words-table*
-  ; (Version, errc-level) ==> (# of error correction codeword, # of block 1,
-  ;			       # of data codewords, # of block 2)
+  ; (Version, errc-level) ==> (# of error correction codeword for each blk, # of block 1,
+  ;			       # of data codewords, # of block 2, # of data codewords)
   ; :level-l :level-m :level-q :level-h
   #3A(
       ((7 1 19 0 0)      (10 1 16 0 0)    (13 1 13 0 0)    (17 1 9 0 0))     ; Version 1
@@ -176,10 +176,14 @@ for each mode, the character capacity are different.")
   (declare (type number version)
 	   (type symbol correct))
   (errc-words version correct 0))
-(defun nr-data-codewords (version correct)
+(defun nr-block (version correct blk)
+  (assert (or (= blk 1) (= blk 2)))
+  (errc-words version correct (- (* blk 2) 1)))
+(defun nr-data-codewords (version correct blk)
   (declare (type number version)
 	   (type symbol correct))
-  (errc-words version correct 2))
+  (assert (or (= blk 1) (= blk 2)))
+  (errc-words version correct (* 2 blk)))
 (defun nr-codewords (version correct)
   "Both data codewords and error correction codewords."
   (declare (type number version)
@@ -264,6 +268,7 @@ capacity codewords(including error correction) | Remainder bits.")
 		(<= (- modules 8) y (- modules 1))) ; In the upper right finder pattern
 	   (and (<= (- modules 8) x (- modules 1))
 		(<= 0 y 8)))))
+;; Annex E
 (defun align-centers (version)
   "Get the centers of the Alignment Patterns."
   (let* ((modules (matrix-modules version))
