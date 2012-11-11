@@ -54,19 +54,7 @@
   "Padding bits into bstring of length BLENGTH so that the length can be times of 8."
   (declare (type number blength))
   (make-string (- 8 (mod blength 8)) :initial-element #\0))
-;    (if (<= padding-length 4)
-;	; bstring almost fills the capacity of the symbol
-;	(make-string padding-length :initial-element #\0)
-;	(progn
-;	  (incf blength 4)
-;	  ; make sure bit string mode 8 is zero
-;	  (let ((remainder (- 8 (mod blength 8))))
-;	    (when (not (= remainder 8))
-;	      (incf blength remainder)
-;	      (setf result (concatenate 'string result
-;					(make-string remainder :initial-element #\0)))))
-;	  (concatenate 'string result
-;		       (padding-special-codeword (- bits blength)))))))
+
 (defun padding-pad-codeword (remain-bits)
   "Padding Pad Codewords 11101100 & 00010001 to fill data codeword capacity of symbol. 
 We have assured that REMAIN-BITS is multiple of 8 in function (padding-bits)."
@@ -84,59 +72,34 @@ We have assured that REMAIN-BITS is multiple of 8 in function (padding-bits)."
 	  (setf result (concatenate 'string result
 				    "00010001"))))
     result))
-(defun encode-data (input)
-  "Encode data into bstring."
-  (declare (type qr-input input))
-  (let* ((bstring "")
-	 (terminator "0000")
-	 (version (version input))
-	 (mode (mode input)))
-    ; 0. TODO: Encode ECI mode indicator
-    ; 1. Encode Mode Indicator
-    (setf bstring (concatenate 'string bstring
-			       (mode->bstring mode)))
-    ; 2. Encode Character Count Indicator
-    (setf bstring (concatenate 'string bstring
-			       (decimal->bstring (length (data input))
-						 (count-indicator-bits version mode))))
 
-    ; 3. Encode input data string
-    (setf bstring (concatenate 'string bstring
-			       (data->bstring (data input) mode)))
-
-    ; 4. Add Terminator "0000"
-    (setf bstring (concatenate 'string bstring terminator))
-    bstring))
 ;;; The overall function to encode qr-input to bstring.
 (defun input->bstring (input)
   (declare (type qr-input input))
-  (let* ((bstring "")
-	 (version (version input))
-	 (correct (correction input)))
-    ; 0. Summed up above.
-    (setf bstring (encode-data input))
-    ; 5. Padding bits
-    (let ((len (length bstring)))
+  (let ((bstring ""))
+    (with-slots (version mode data-bstring (correct correction)) input
       (setf bstring (concatenate 'string bstring
-				 (padding-bits len))))
+				 (mode->bstring mode)
+				 (decimal->bstring (length (data input))
+						   (count-indicator-bits version mode))
+				 data-bstring))
+
+      ; 5. Padding bits
+      (let ((len (length bstring)))
+	(setf bstring (concatenate 'string bstring
+				   (padding-bits len))))
+      ; 6. Padding Pad codewords
+      (let ((len (length bstring)))
+	(setf bstring (concatenate 'string bstring
+				   (padding-pad-codeword (- (data-bits-capacity version correct)
+							    len)))))
+
+      (let ((blocks (bstring->blocks bstring version correct)))
+	(do-errc blocks version correct)
+	(setf bstring (blocks->bstring blocks version correct)))
     
-    ; 6. Padding Pad codewords
-    (let ((len (length bstring)))
+      ; 7. Any remainder bits needed? *MODULE-CAPACITY-TABLE*
       (setf bstring (concatenate 'string bstring
-				 (padding-pad-codeword (- (* (nr-data-codewords version correct)
-							     8)
-							  len)))))
+				 (make-string (remainder-bits version) :initial-element #\0))))
     
-    ; 7. Do error correction for above codewords
-    (let ((errcobj (generate-errcobj bstring version correct)))
-      (setf bstring (concatenate 'string bstring
-				 (errcobj->bstring errcobj))))
-    
-    ; 7. Any remainder bits needed? *MODULE-CAPACITY-TABLE*
-    (setf bstring (concatenate 'string bstring
-			       (make-string (remainder-bits version) :initial-element #\0)))
-    ; (print "=============")
-    ; (print (length bstring))
-    ; (print "=============")
-    ; 8. TODO: Data Allocation
     bstring))
