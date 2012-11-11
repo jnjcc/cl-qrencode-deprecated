@@ -16,6 +16,8 @@
 ;;;; copyright.el
 ;;;; This file contains
 
+;; Version 1.3.2?! That was a joke...
+
 (setq auto-insert-directory (expand-file-name "~/.emacs.d/templates/"))
 (setq auto-insert-query nil) ;; Don't ask, just do the auto insertion
 (define-auto-insert 'lisp-mode "lisp.tpl") ;; ~/.emacs.d/templates/lisp.tpl
