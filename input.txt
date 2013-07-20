@@ -1,0 +1,5 @@
+;; github.png
+CL-USER> (cl-qrencode:qrencode "https://github.com/jnjcc/cl-qrencode" :fpng "output/github.png")
+Version reset from 1 to 4
+png file `output/github.png' wrote..
+; No value

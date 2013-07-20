@@ -287,5 +287,5 @@ Information: they cannot be masked."
     (with-slots (version) input
       (let ((matrix (codeword-placement bstring version correction)))
 	(matrix->png matrix fpng version pixsize margin))))
-  (format t "png file `~A' wrote.." fpng)
+  (format t "png file `~A' wrote..." fpng)
   (values))
